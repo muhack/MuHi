@@ -343,13 +343,13 @@ Rect detectFace( Mat *frame_in ){
     // //faceROI = frame( faces[0] ); 
 }
 
-Rect detectEye( Mat *frame_in ){
+Rect detectEye( Mat frame_in, int lr_eye){
     std::vector<Rect> eyes;
 
     //Detect faces
-    eyes_cascade.detectMultiScale( faceROI, eyes, 1.1, 2, 0 |CASCADE_SCALE_IMAGE, Size(30, 30) );
+    eyes_cascade.detectMultiScale( frame_in, eyes, 1.1, 2, 0 |CASCADE_SCALE_IMAGE, Size(30, 30) );
 
-    //We consider only ONE face, the first found... maybe not the best solution...
+    //Detect the left or rigth eye
     if(eyes.size() != 0 && eyes.size() == 2){
         if(eyes[0].x > face.width/2 && lr_eye == 1){
             return eyes[0]; 
@@ -362,7 +362,6 @@ Rect detectEye( Mat *frame_in ){
         } 
     }else
         return Rect(0,0,0,0);
-    // //faceROI = frame( faces[0] ); 
 }
 
 
@@ -372,8 +371,9 @@ int init(){
     if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
 
     //-- 2. Read the video stream
-    capture.open( -1 ); //-1 for the default video source
+    //capture.open( -1 ); //-1 for the default video source
     //capture.open("output640.avi");
+    capture.open("test_video.mp4");
     if ( ! capture.isOpened() ) { printf("--(!)Error opening video capture\n"); return -1; }
 
     //Try to set an higer resolution
@@ -414,9 +414,6 @@ void print_term(String msg){
     std::cout<<msg<<endl;
 }
 
-
-//------------------------NEW FUNCTIONS---------------------------------//
-
 // cv::Point findPupil(cv::Mat frame, cv::Rect face){ //Cambiare il nome variabile "face" a "eye"
 //     cv::Mat faceROI = frame(face);
 
@@ -446,18 +443,33 @@ void findEyes(cv::Mat frame_gray, cv::Rect face) {
   cv::Mat faceROI = frame_gray(face);
   cv::Mat debugFace = faceROI;
 
-  //-- Find eye regions and draw them
+
+  //Qui ci sta il problema che la regione dell'occhio non è gestita in maniera sensata
+  //Da una parte possiamo cercare di ottenerla proporzionalmente (veloce), ma dobbiamo aggiungere sistemi di controllo
+  //Dall'altra possiamo usare i cascade appositi (lento) ma siamo più sicuri...
+
+
+  //Find eye regions -- We must work on better region definition
   int eye_region_width = face.width * (kEyePercentWidth/100.0);
   int eye_region_height = face.width * (kEyePercentHeight/100.0);
   int eye_region_top = face.height * (kEyePercentTop/100.0);
+
   leftEyeRegion = Rect(face.width*(kEyePercentSide/100.0), eye_region_top,eye_region_width,eye_region_height);
   rightEyeRegion = Rect(face.width - eye_region_width - face.width*(kEyePercentSide/100.0), eye_region_top,eye_region_width,eye_region_height);
 
-  //-- Find Eye Centers
+  leftEyeRegion = detectEye( faceROI ,0);
+
+
+  //Find Eye Centers
   // cv::Point leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
   // cv::Point rightPupil = findEyeCenter(faceROI,rightEyeRegion,"Right Eye");
-  leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
+
+  if(leftEyeRegion.area() > 0)
+    leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
+
   rightPupil = findEyeCenter(faceROI,rightEyeRegion,"Right Eye");
+
+  imshow("debug left", faceROI(leftEyeRegion));
   
   // change eye centers to face coordinates
   rightPupil.x += rightEyeRegion.x;
@@ -466,8 +478,17 @@ void findEyes(cv::Mat frame_gray, cv::Rect face) {
   leftPupil.y += leftEyeRegion.y;
  
   // draw eye centers
-  circle(debugFace, rightPupil, 3, 1234);
-  circle(debugFace, leftPupil, 3, 1234);
+  // circle(debugFace, rightPupil, 3, 1234);
+  // circle(debugFace, leftPupil, 3, 1234);
+
+  //Vertical line
+  line(debugFace, Point(rightPupil.x, rightPupil.y-5), Point(rightPupil.x, rightPupil.y+5), 1234 );
+  line(debugFace, Point(leftPupil.x, leftPupil.y-5), Point(leftPupil.x, leftPupil.y+5), 1234 );
+
+  //Horizzontal line
+  line(debugFace, Point(rightPupil.x-5, rightPupil.y), Point(rightPupil.x+5, rightPupil.y), 1234 );
+  line(debugFace, Point(leftPupil.x-5, leftPupil.y), Point(leftPupil.x+5, leftPupil.y), 1234 );
+
 
 }
 

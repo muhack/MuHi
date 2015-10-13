@@ -106,18 +106,14 @@ cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
   cv::Mat eyeROIUnscaled = face(eye);
   cv::Mat eyeROI;
   scaleToFastSize(eyeROIUnscaled, eyeROI);
-  // draw eye region
-  //rectangle(face,eye,1234);
-  //-- Find the gradient
+  //Find the gradient
   cv::Mat gradientX = computeMatXGradient(eyeROI);
   cv::Mat gradientY = computeMatXGradient(eyeROI.t()).t();
-  //-- Normalize and threshold the gradient
+  //Normalize and threshold the gradient
   // compute all the magnitudes
   cv::Mat mags = matrixMagnitude(gradientX, gradientY);
   //compute the threshold
   double gradientThresh = computeDynamicThreshold(mags, kGradientThreshold);
-  //double gradientThresh = kGradientThreshold;
-  //double gradientThresh = 0;
   //normalize
   for (int y = 0; y < eyeROI.rows; ++y) {
     double *Xr = gradientX.ptr<double>(y), *Yr = gradientY.ptr<double>(y);
@@ -134,7 +130,6 @@ cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
       }
     }
   }
-  //imshow(debugWindow,gradientX);
   //-- Create a blurred and inverted image for weighting
   cv::Mat weight;
   GaussianBlur( eyeROI, weight, cv::Size( kWeightBlurSize, kWeightBlurSize ), 0, 0 );
@@ -144,7 +139,6 @@ cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
       row[x] = (255 - row[x]);
     }
   }
-  //imshow(debugWindow,weight);
   //-- Run the algorithm!
   cv::Mat outSum = cv::Mat::zeros(eyeROI.rows,eyeROI.cols,CV_64F);
   // for each possible gradient location

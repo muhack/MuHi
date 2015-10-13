@@ -1,9 +1,7 @@
-g++ -o eye_traking eye_traking.cpp `pkg-config --cflags --libs opencv`
+#g++ -o eye_traking eye_traking.cpp `pkg-config --cflags --libs opencv`
+#clear && python -c 'print "#"*80'  && g++ -o eye_traking -ggdb eye_traking.cpp `pkg-config --cflags --libs opencv`
+#clear && python -c 'print "#"*80'  && g++ -o eye_traking eye_traking.cpp findEyeCenter.cpp  findEyeCorner.cpp  helpers.cpp `pkg-config --cflags --libs opencv`
 
-clear && python -c 'print "#"*80'  && g++ -o eye_traking -ggdb eye_traking.cpp `pkg-config --cflags --libs opencv`
-
-
-clear && python -c 'print "#"*80'  && g++ -o eye_traking eye_traking.cpp findEyeCenter.cpp  findEyeCorner.cpp  helpers.cpp `pkg-config --cflags --libs opencv`
-
+clear && python -c 'print "#"*80'  && g++ -o eye_traking eye_traking.cpp findEyeCenter.cpp helpers.cpp `pkg-config --cflags --libs opencv`
 
 ##findEyeCenter.cpp  findEyeCorner.cpp  helpers.cpp
