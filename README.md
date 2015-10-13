@@ -11,4 +11,5 @@ danielebarattieri#gmail.com
 
 # Reference
 (1) Timm and Barth. Accurate eye centre localisation by means of gradients. In Proceedings of the Int. Conference on Computer Theory and Applications (VISAPP), volume 1, pages 125-130, Algarve, Portugal, 2011. INSTICC. ( http://www.inb.uni-luebeck.de/fileadmin/files/PUBPDFS/TiBa11b.pdf )
+
 (2) Tristan Hume. Simple, accurate eye center tracking in OpenCV. ( http://thume.ca/projects/2012/11/04/simple-accurate-eye-center-tracking-in-opencv/ )
