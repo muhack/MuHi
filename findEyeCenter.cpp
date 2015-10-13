@@ -102,13 +102,14 @@ void testPossibleCentersFormula(int x, int y, const cv::Mat &weight,double gx, d
   }
 }
 
-cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
+cv::Point findEyeCenter(cv::Mat face, cv::Rect eye) {
   cv::Mat eyeROIUnscaled = face(eye);
   cv::Mat eyeROI;
   scaleToFastSize(eyeROIUnscaled, eyeROI);
   //Find the gradient
   cv::Mat gradientX = computeMatXGradient(eyeROI);
   cv::Mat gradientY = computeMatXGradient(eyeROI.t()).t();
+
   //Normalize and threshold the gradient
   // compute all the magnitudes
   cv::Mat mags = matrixMagnitude(gradientX, gradientY);
@@ -160,12 +161,11 @@ cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
   double numGradients = (weight.rows*weight.cols);
   cv::Mat out;
   outSum.convertTo(out, CV_32F,1.0/numGradients);
-  //imshow(debugWindow,out);
-  //-- Find the maximum point
+  //Find the maximum point
   cv::Point maxP;
   double maxVal;
   cv::minMaxLoc(out, NULL,&maxVal,NULL,&maxP);
-  //-- Flood fill the edges
+  //Flood fill the edges
   if(kEnablePostProcess) {
     cv::Mat floodClone;
     //double floodThresh = computeDynamicThreshold(out, 1.5);
@@ -176,8 +176,6 @@ cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
     //   imwrite("eyeFrame.png",eyeROIUnscaled);
     // }
     cv::Mat mask = floodKillEdges(floodClone);
-    //imshow(debugWindow + " Mask",mask);
-    //imshow(debugWindow,out);
     // redo max
     cv::minMaxLoc(out, NULL,&maxVal,NULL,&maxP,mask);
   }

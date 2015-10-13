@@ -98,7 +98,7 @@ Point eyeCenter;
 int lost_probaility = 0;
 int found_probability = 0;
 float treshold_stability = 20.0;
-float eye_treshold_stability = 5.0;
+float eye_treshold_stability = 1.0;
 
 int PREVIOS_STAGE_TRIGGER = 100;
 int NEXT_STAGE_TRIGGER = 50;
@@ -293,8 +293,9 @@ void checkStability(Rect *result){
         found_probability ++;
         lost_probaility--;
     }
-
 }
+
+
 
 int deltaShift(){
 
@@ -457,17 +458,17 @@ void findEyes(cv::Mat frame_gray, cv::Rect face) {
   leftEyeRegion = Rect(face.width*(kEyePercentSide/100.0), eye_region_top,eye_region_width,eye_region_height);
   rightEyeRegion = Rect(face.width - eye_region_width - face.width*(kEyePercentSide/100.0), eye_region_top,eye_region_width,eye_region_height);
 
-  leftEyeRegion = detectEye( faceROI ,0);
+  //leftEyeRegion = detectEye( faceROI ,0);
 
 
   //Find Eye Centers
   // cv::Point leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
   // cv::Point rightPupil = findEyeCenter(faceROI,rightEyeRegion,"Right Eye");
 
-  if(leftEyeRegion.area() > 0)
-    leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
+  //if(leftEyeRegion.area() > 0)
+  leftPupil = findEyeCenter(faceROI,leftEyeRegion);
 
-  rightPupil = findEyeCenter(faceROI,rightEyeRegion,"Right Eye");
+  rightPupil = findEyeCenter(faceROI,rightEyeRegion);
 
   imshow("debug left", faceROI(leftEyeRegion));
   
