@@ -16,7 +16,7 @@
 #include <vector>
 #include "constants.h"
 #include "findEyeCenter.h"
-#include "Target.cpp"
+//#include "Target.cpp"
 //#include "findEyeCorner.h"
 //#include "Settings.h"
 
@@ -39,6 +39,7 @@ void detectAndDisplay( cv::Mat frame );
 Point findGazeFocus();
 void getTargets();
 int deltaShift();
+int selectCamera();
 
 //------------------Global variables----------------------//
 String face_cascade_name = "/usr/local/share/OpenCV/lbpcascades/lbpcascade_frontalface.xml";
@@ -49,6 +50,7 @@ String window_name_eyeball = "Capture - Eyeball detection";
 CascadeClassifier face_cascade;
 CascadeClassifier eyes_cascade;
 char *window_title = "Gaze Traking";
+int max_tested_camera = 10;
 
 cv::Rect leftEyeRegion;
 cv::Rect rightEyeRegion;
@@ -121,7 +123,7 @@ int stage = 0;
 bool flip_input = false;
 
 //----------------------------------------------------------//
-std::vector<Target> targets;
+//std::vector<Target> targets;
 
 //Settings settings;
 
@@ -166,6 +168,7 @@ int main( void ){
 
         if(face.area() != 0){
             
+
             findEyes(frame,face);
 
             //Pupil stability
@@ -352,9 +355,15 @@ int init(){
     if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
 
     //-- 2. Read the video stream
-    //capture.open( -1 ); //-1 for the default video source
+    //capture.open( 0 ); //-1 for the default video source
     //capture.open("output640.avi");
-    capture.open("test_video.mp4");
+    //capture.open("test_video.mp4");
+    //int web = selectCamera();
+
+    //cout<<"Selected index "<<web<<endl;
+
+    capture.open( -1 );
+
     if ( ! capture.isOpened() ) { printf("--(!)Error opening video capture\n"); return -1; }
 
     //Try to set an higer resolution
@@ -375,6 +384,25 @@ int init(){
 
     //If all went ok..
     return 0;
+
+}
+
+int selectCamera(){
+    cv::VideoCapture temp_camera;
+
+    for(int i = 0; i < max_tested_camera; i++){
+        temp_camera.open(i);
+        if(temp_camera.isOpened()){
+            cout<<"Found camera with index "<<i<<endl;
+        }
+        temp_camera.release();
+    }
+
+    cout<<endl<<"Camera number? ";
+
+    int web;
+    cin >> web;
+    return web;
 
 }
 
@@ -444,6 +472,9 @@ void findEyes(cv::Mat frame_gray, cv::Rect face) {
   //Find Eye Centers
   // cv::Point leftPupil = findEyeCenter(faceROI,leftEyeRegion,"Left Eye");
   // cv::Point rightPupil = findEyeCenter(faceROI,rightEyeRegion,"Right Eye");
+
+  equalizeHist( faceROI, faceROI);
+
 
   //if(leftEyeRegion.area() > 0)
   leftPupil = findEyeCenter(faceROI,leftEyeRegion);
