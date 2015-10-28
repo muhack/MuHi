@@ -38,8 +38,10 @@ void stageCheck();
 void detectAndDisplay( cv::Mat frame );
 Point findGazeFocus();
 void getTargets();
-int deltaShift();
+void deltaShift();
 int selectCamera();
+
+void gazeDebug();
 
 //------------------Global variables----------------------//
 String face_cascade_name = "/usr/local/share/OpenCV/lbpcascades/lbpcascade_frontalface.xml";
@@ -63,6 +65,20 @@ Point candi_rightPupil;
 //For targetting..
 bool waiting_for_lock_target = false;
 Point current_target;
+
+//Pupil coding - the actual position of the pupil
+bool up_pos = false;
+bool down_pos = false;
+bool left_pos = false;
+bool rigth_pos = false;
+
+float move_trigger = 20.0;
+
+float up_trigger = 10;
+float down_trigger = 10;
+float left_trigger = 10;
+float rigth_trigger = 10;
+
 
 VideoCapture capture;
 
@@ -100,7 +116,7 @@ Point eyeCenter;
 //When it == 100, the program steps back to the previos stage
 int lost_probaility = 0;
 int found_probability = 0;
-float treshold_stability = 20.0;
+float treshold_stability = 2.0;
 float eye_treshold_stability = 1.0;
 
 int PREVIOS_STAGE_TRIGGER = 100;
@@ -181,7 +197,10 @@ int main( void ){
 
             }
 
-            int command = deltaShift();
+            deltaShift();
+            if(debug_mode)
+                gazeDebug();
+
         }
 
         if(debug_mode){
@@ -236,6 +255,7 @@ int main( void ){
     return 0;
 }
 
+
 void checkStability(Rect *result){
     Rect *candidate;
 
@@ -278,9 +298,76 @@ void checkStability(Rect *result){
     }
 }
 
+void gazeDebug(){
+    cout<<"Actual status: "<<endl;
+    if(up_pos){
+        circle(frame, Point(10, frame.cols/2), 5, 255);
+        cout<<"UP!"<<endl;
+    }
+
+    if(down_pos){
+        circle(frame, Point(frame.rows-10, frame.cols/2), 5, 255);
+        cout<<"DOWN!"<<endl;
+    }
+
+    if(rigth_pos){
+        circle(frame, Point(frame.rows/2, frame.cols-10), 5, 255);
+        cout<<"Right!"<<endl;   
+    }
+
+    if(left_pos){
+        circle(frame, Point(frame.rows/2, 10), 5, 255);
+        cout<<"Left!"<<endl;   
+    }
+
+    cout<<"---------------"<<endl<<endl;
+}
+
+Point prev_left_pos;
+Point left_center;
+
+void deltaShift(){
+
+    //Prima prova di riconoscimento posizione basandosi sulla posizione attuale della pupilla
+    //in relazione al centro del rettangolo regone occhio -- Non credo sia una buona soluzione :\
+    left_center = Point(leftEyeRegion.width/2 , leftEyeRegion.width/2);
+
+    // left_center.x += rightEyeRegion.x;
+    // left_center.y += rightEyeRegion.y;
+
+    circle(frame, left_center, 10, 255);    
+
+    if( (leftPupil.x - left_center.x) > move_trigger){
+        down_pos = true;
+        up_pos = false; //Fault tollerance
+    } else if( ( leftPupil.x - left_center.x ) < -move_trigger){
+        down_pos = false;
+        up_pos = true;
+    }
 
 
-int deltaShift(){
+    if( (leftPupil.y - left_center.y) > move_trigger ){
+        rigth_pos = true;
+        left_pos = false;
+
+    } else if( (leftPupil.y - left_center.y) < -move_trigger ){
+        rigth_pos = false;
+        left_pos = true;
+    }
+
+
+    // if(prev_left_pos != NULL ){
+    //     float diff = sqrt( pow( (prev_left_pos.x - leftPupil.x) ,2) + pow( (prev_left_pos.y - leftPupil.y) ,2)  );
+    //     //Now we know that the pupil moved more than the trigger distance..! So we must chech in wich direction it moved..
+    //     if(diff > move_trigger){
+    //         //From the center it moves up
+    //         if()
+    //         //F
+    //     }
+    // } 
+
+    // //We update the last position with the actual 
+    // prev_left_pos = leftPupil;
 
 }
 
@@ -350,13 +437,12 @@ Rect detectEye( Mat frame_in, int lr_eye){
 
 
 int init(){
-    //-- 1. Load the cascade
+    //Load the cascade
     if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face cascade\n"); return -1; };
     if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
 
-    //-- 2. Read the video stream
+    //Open video
     //capture.open( 0 ); //-1 for the default video source
-    //capture.open("output640.avi");
     //capture.open("test_video.mp4");
     //int web = selectCamera();
 
