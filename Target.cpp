@@ -1,16 +1,25 @@
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <stdio.h>
+#include <fstream>
+#include <vector>
+
+
+using namespace std;
+
+
 class Target{
 
     public:
-        Point target;
-        cv::Rect leftEyeRegion;
-        cv::Rect rightEyeRegion;
-        Point leftPupil;
-        Point rightPupil;
+        cv::Point target;
+        cv::Rect face;
+        cv::Point leftPupil;
+        cv::Point rightPupil;
 
-    Target(Point t, cv::Rect lER, cv::Rect rER, Point lP, Point rP){
+
+    Target(cv::Point t, cv::Rect _face, cv::Point lP, cv::Point rP){
         target = t;
-        leftEyeRegion = lER;
-        rightEyeRegion = rER;
+        face = _face;
         leftPupil = lP;
         rightPupil = rP;
     }

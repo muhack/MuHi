@@ -16,10 +16,10 @@
 #include <vector>
 #include "constants.h"
 #include "findEyeCenter.h"
-//#include "Target.cpp"
+//#include "PupilStack.cpp"
+#include "Target.cpp"
 //#include "findEyeCorner.h"
 //#include "Settings.h"
-
 
 using namespace std;
 using namespace cv;
@@ -80,9 +80,19 @@ float down_trigger = 0;
 float left_trigger = 0;
 float rigth_trigger = 0;
 
-bool tared = true;
+bool tared = false;
+bool target_checked = false;
 
 VideoCapture capture;
+
+//Target stack
+int targets_num = 9; 
+Target **targets = new Target*[targets_num];
+
+// int X_RESOLUTION = 1366;
+// int Y_RESOLUTION =  768;
+int X_RESOLUTION = 640;
+int Y_RESOLUTION = 480;
 
 //-- Note, either copy these two files from opencv/data/haarscascades to your current folder, or change these locations
 //cv::String face_cascade_name = "../../../res/haarcascade_frontalface_alt.xml";
@@ -101,11 +111,11 @@ Mat frame;
 //The frame's area where we found a face, and search for eye
 Mat faceROI;
 //The frame's area where we found am eye, ad search for eyeball
-Mat eyeROI;
-//The image that we want to show on the debug window
+Mat eyeROI; //Maybe not usefull
+//The end process result
 Mat result;
 //The user interface - we write here all the user's stuff...
-Mat HUD;
+Mat HUD; //Not used yet
 
 //The candidate
 Rect face;
@@ -152,8 +162,6 @@ int main( void ){
     cout<<"Loading cascade and opening webcam..."<<endl;
     errors = init();
     cout<<"All ok. Startin capturing..."<<endl;
-
-
 
     while ( capture.read(frame) && !errors){
 
@@ -229,7 +237,7 @@ int main( void ){
         if( (char)c == '-' ) { }
         if( (char)c == '+' ) { }
         if( (char)c == 'f' ) { flip_input = !flip_input; }
-        if( (char)c == 't' ) { getTargets(); }
+        if( (char)c == 't' ) { target_checked = true; }
         
         if(face.area() != 0)
             circle(result, findGazeFocus(), 5, 5);
@@ -249,7 +257,83 @@ int main( void ){
     return 0;
 }
 
+//I REALLY DON'T LIKE HOW I DID THIS METHOD
+//The stack index is based on the tare_phase
+//There are 9 target: rigth/center/left for upper/center/lower zone
+
+int tare_phase = 0;
+
 void tare(){
+
+    Point target;
+    
+    switch (tare_phase){
+        case 0: // Left upper corner
+            target = Point(0,0);
+        break;
+
+        case 1: // Center upper
+            target = Point(X_RESOLUTION/2 , 0);
+        break;
+
+        case 2: // Rigth upper corner
+            target = Point(X_RESOLUTION, 0);
+        break;
+
+        case 3: // Left center side
+            target = Point(0, Y_RESOLUTION/2);
+        break;
+
+        case 4: // Center of the screen
+            target = Point(X_RESOLUTION/2 , Y_RESOLUTION/2);
+        break;
+
+        case 5: // Rigth center side
+            target = Point(X_RESOLUTION , Y_RESOLUTION/2);
+        break;
+
+        case 6: // Left lower corner
+            target = Point(0, Y_RESOLUTION);
+        break;
+
+        case 7: // Center lower
+            target = Point(X_RESOLUTION/2 , Y_RESOLUTION);
+        break;
+
+        case 8: // Rigth lower corner
+            target = Point(X_RESOLUTION, Y_RESOLUTION);
+        break;
+    }
+
+    circle(frame, target, 10, 255, -1); 
+
+    if(target_checked){
+        target_checked = false;
+        targets[tare_phase] = new Target(target, face, leftPupil, rightPupil);
+        tare_phase ++;
+
+        if (tare_phase == 9){
+            //We have all the targets' data! Let's define the moving triggers!
+            up_trigger = (targets[0]->target.x + targets[1]->target.x + targets[2]->target.x) / 3;
+            down_trigger = (targets[6]->target.x + targets[7]->target.x + targets[8]->target.x) / 3;
+            left_trigger = (targets[0]->target.x + targets[3]->target.x + targets[6]->target.x) / 3;
+            rigth_trigger = (targets[2]->target.x + targets[5]->target.x + targets[8]->target.x) / 3;
+
+            //With the center target (index = 4) we should do some adjustmets.. but I have no idea about it...
+
+
+            for( int i = 0; i < 9; i++){
+                cout<<"Target point at: " << targets[i]->target.x << " - " << targets[i]->target.y << "\n"<<endl;
+                cout<<"Face at: "<<targets[i]->face.x << " - " << targets[i]->face.y <<"\n"<<endl;
+                cout<<"leftPupil at: " << targets[i]->leftPupil.x << " - " << targets[i]->leftPupil.y << "\n"<<endl;
+                cout<<"rightPupil at: " << targets[i]->rightPupil.x << " - " << targets[i]->rightPupil.y << "\n"<<endl;
+            }
+
+            printf("Triggers: %f - %f - %f - %f \n", up_trigger, down_trigger, left_trigger, rigth_trigger);
+
+            tared = true;
+        }
+    }
 
 }
 
@@ -336,7 +420,7 @@ void deltaShift(){
     left_center.x += rightEyeRegion.x;
     left_center.y += rightEyeRegion.y;
 
-    circle(frame, left_center, 10, 255);    
+    //circle(frame, left_center, 10, 255);    
 
     if( (leftPupil.x - left_center.x) > move_trigger){
         down_pos = true;
@@ -444,7 +528,7 @@ int init(){
 
     //Open video
     //capture.open( 0 ); //-1 for the default video source
-    //capture.open("test_video.mp4");
+    //capture.open("test_video/test_video.mp4");
     //int web = selectCamera();
 
     //cout<<"Selected index "<<web<<endl;
