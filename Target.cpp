@@ -5,6 +5,7 @@
 #include <vector>
 
 
+
 using namespace std;
 
 
@@ -22,6 +23,18 @@ class Target{
         face = _face;
         leftPupil = lP;
         rightPupil = rP;
+    }
+
+    std::string toString(){
+
+        std::stringstream out;
+
+        out << "Target point at: " << target.x << " - " << target.y << "\n"<<endl;
+        out << "Face at: "<<face.x << " - " << face.y << "\n"<<endl;
+        out << "leftPupil at: " << leftPupil.x << " - " <<leftPupil.y << "\n"<<endl;
+        out << "rightPupil at: " << rightPupil.x << " - " << rightPupil.y << "\n"<<endl;
+
+        return out.str();
     }
     
 };

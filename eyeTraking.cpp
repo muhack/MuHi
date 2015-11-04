@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <vector>
+#include <string>
 #include "constants.h"
 #include "findEyeCenter.h"
 //#include "PupilStack.cpp"
@@ -39,6 +40,7 @@ Point findGazeFocus();
 void getTargets();
 void deltaShift();
 int selectCamera();
+void resetTare();
 void tare();
 void print_logo();
 
@@ -73,7 +75,7 @@ bool down_pos = false;
 bool left_pos = false;
 bool rigth_pos = false;
 
-float move_trigger = 20.0;
+float treshold_trigger = 1.0;
 
 float up_trigger = 0;
 float down_trigger = 0;
@@ -185,47 +187,52 @@ int main( void ){
         //Blurrrrrrrrrr!!!
         //GaussianBlur( frame, frame, Size(9, 9), 2, 2 );
 
-        //We first must understand the eye's mobility
-        if(!tared){
-            tare();
-        } else {
+        //Apply the classifier to the frame
+        temp = detectFace( &frame );
+        checkStability( &temp );
 
-            //Apply the classifier to the frame
-            temp = detectFace( &frame );
-            checkStability( &temp );
+        if(face.area() != 0){
+            
 
-            if(face.area() != 0){
-                
+            findEyes(frame,face);
 
-                findEyes(frame,face);
+            //Pupil stability
+            if( sqrt( pow(leftPupil.x - candi_leftPupil.x ,2) + pow(rightPupil.x - candi_rightPupil.x ,2) ) >= eye_treshold_stability ){
+                candi_leftPupil.x = (candi_leftPupil.x + leftPupil.x ) / 2;
+                candi_leftPupil.y = (candi_leftPupil.y + leftPupil.y ) / 2;
 
-                //Pupil stability
-                if( sqrt( pow(leftPupil.x - candi_leftPupil.x ,2) + pow(rightPupil.x - candi_rightPupil.x ,2) ) >= eye_treshold_stability ){
-                    candi_leftPupil.x = (candi_leftPupil.x + leftPupil.x ) / 2;
-                    candi_leftPupil.y = (candi_leftPupil.y + leftPupil.y ) / 2;
+                candi_rightPupil.x = (candi_rightPupil.x + rightPupil.x) / 2;
+                candi_rightPupil.y = (candi_rightPupil.y + rightPupil.y) / 2;
 
-                    candi_rightPupil.x = (candi_rightPupil.x + rightPupil.x) / 2;
-                    candi_rightPupil.y = (candi_rightPupil.y + rightPupil.y) / 2;
+            }
 
-                }
-
-                deltaShift();
-                if(debug_mode)
-                    gazeDebug();
-
+            //We first must understand the eye's mobility
+            if(!tared){
+                tare();
+            } else {
+                    deltaShift();
             }
 
             if(debug_mode){
-                rectangle(frame, Point(face.x, face.y), Point(face.x + face.height, face.y + face.width), Scalar(255,0,0));
-                rectangle(frame, Point(temp.x, temp.y), Point(temp.x + temp.height, temp.y + temp.width), Scalar(255,0,0));
-                circle(frame, candi_rightPupil + Point(face.x, face.y), 5, 255);
-                circle(frame, candi_rightPupil + Point(face.x, face.y), 5, 255);
+                int skip = 0;
+                if(skip % 10 == 0){
+                    skip = 0;
+                    gazeDebug();
+                }
             }
 
-            if(waiting_for_lock_target)
-                    rectangle(result, Point(0,0), Point(result.cols, result.rows), Scalar(255,0,0));
-            
         }
+
+        if(debug_mode){
+            rectangle(frame, Point(face.x, face.y), Point(face.x + face.height, face.y + face.width), Scalar(255,0,0));
+            rectangle(frame, Point(temp.x, temp.y), Point(temp.x + temp.height, temp.y + temp.width), Scalar(255,0,0));
+            circle(frame, candi_rightPupil + Point(face.x, face.y), 5, 255);
+            circle(frame, candi_rightPupil + Point(face.x, face.y), 5, 255);
+        }
+
+        if(waiting_for_lock_target)
+                rectangle(result, Point(0,0), Point(result.cols, result.rows), Scalar(255,0,0));
+            
 
         //if(debug_mode)
             //display();
@@ -234,7 +241,7 @@ int main( void ){
         int c = waitKey(10);
         if( (char)c == 27 ) { break; }
         if( (char)c == 'd' ) { debug_mode = !debug_mode; }
-        if( (char)c == '-' ) { }
+        if( (char)c == '-' ) { resetTare(); }
         if( (char)c == '+' ) { }
         if( (char)c == 'f' ) { flip_input = !flip_input; }
         if( (char)c == 't' ) { target_checked = true; }
@@ -256,6 +263,7 @@ int main( void ){
     destroyWindow(window_title);
     return 0;
 }
+
 
 //I REALLY DON'T LIKE HOW I DID THIS METHOD
 //The stack index is based on the tare_phase
@@ -313,20 +321,17 @@ void tare(){
         tare_phase ++;
 
         if (tare_phase == 9){
-            //We have all the targets' data! Let's define the moving triggers!
-            up_trigger = (targets[0]->target.x + targets[1]->target.x + targets[2]->target.x) / 3;
-            down_trigger = (targets[6]->target.x + targets[7]->target.x + targets[8]->target.x) / 3;
-            left_trigger = (targets[0]->target.x + targets[3]->target.x + targets[6]->target.x) / 3;
-            rigth_trigger = (targets[2]->target.x + targets[5]->target.x + targets[8]->target.x) / 3;
+            //We have all the targets' data! Let's define the moving triggers! 
+            //For now, just focus ONLY on the leftPupil
+            up_trigger = (targets[0]->leftPupil.x + targets[1]->leftPupil.x + targets[2]->leftPupil.x) / 3;
+            down_trigger = (targets[6]->leftPupil.x + targets[7]->leftPupil.x + targets[8]->leftPupil.x) / 3;
+            left_trigger = (targets[0]->leftPupil.y + targets[3]->leftPupil.y + targets[6]->leftPupil.y) / 3;
+            rigth_trigger = (targets[2]->leftPupil.y + targets[5]->leftPupil.y + targets[8]->leftPupil.y) / 3;
 
             //With the center target (index = 4) we should do some adjustmets.. but I have no idea about it...
 
-
             for( int i = 0; i < 9; i++){
-                cout<<"Target point at: " << targets[i]->target.x << " - " << targets[i]->target.y << "\n"<<endl;
-                cout<<"Face at: "<<targets[i]->face.x << " - " << targets[i]->face.y <<"\n"<<endl;
-                cout<<"leftPupil at: " << targets[i]->leftPupil.x << " - " << targets[i]->leftPupil.y << "\n"<<endl;
-                cout<<"rightPupil at: " << targets[i]->rightPupil.x << " - " << targets[i]->rightPupil.y << "\n"<<endl;
+                cout<<"-----Target number "<<i<<"------"<<endl<<targets[i]->toString()<<"--------------------------"<<endl;
             }
 
             printf("Triggers: %f - %f - %f - %f \n", up_trigger, down_trigger, left_trigger, rigth_trigger);
@@ -337,6 +342,10 @@ void tare(){
 
 }
 
+void resetTare(){
+    tared = false;
+    tare_phase = 0;
+}
 
 void checkStability(Rect *result){
     Rect *candidate;
@@ -381,28 +390,32 @@ void checkStability(Rect *result){
 }
 
 void gazeDebug(){
-    cout<<"Actual status: "<<endl;
+    // cout<<"Actual status: "<<endl;
     if(up_pos){
-        circle(frame, Point(10, frame.cols/2), 5, 255);
-        cout<<"UP!"<<endl;
+        circle(frame, Point(X_RESOLUTION/2 , 0), 10, 255, -1);
+        // cout<<"UP!"<<endl;
+        // system("espeak Up");
     }
 
     if(down_pos){
-        circle(frame, Point(frame.rows-10, frame.cols/2), 5, 255);
-        cout<<"DOWN!"<<endl;
+        circle(frame, Point(X_RESOLUTION/2 , Y_RESOLUTION), 10, 255, -1);
+        // cout<<"DOWN!"<<endl;
+        // system("espeak Down");
     }
 
     if(rigth_pos){
-        circle(frame, Point(frame.rows/2, frame.cols-10), 5, 255);
-        cout<<"Right!"<<endl;   
+        circle(frame,Point(X_RESOLUTION , Y_RESOLUTION/2), 10, 255, -1);
+        // cout<<"Right!"<<endl;  
+        // system("espeak Right"); 
     }
 
     if(left_pos){
-        circle(frame, Point(frame.rows/2, 10), 5, 255);
-        cout<<"Left!"<<endl;   
+        circle(frame, Point(0 , Y_RESOLUTION/2), 10, 255, -1);
+        // cout<<"Left!"<<endl;  
+        // system("espeak Left"); 
     }
 
-    cout<<"---------------"<<endl<<endl;
+    // cout<<"---------------"<<endl<<endl;
 }
 
 Point prev_left_pos;
@@ -411,31 +424,32 @@ Point left_center;
 
 void deltaShift(){
 
-    left_center = Point(0,0);
+    // left_center = Point(0,0);
 
-    //Prima prova di riconoscimento posizione basandosi sulla posizione attuale della pupilla
-    //in relazione al centro del rettangolo regone occhio -- Non credo sia una buona soluzione :\
-    left_center = Point(leftEyeRegion.width/2 , leftEyeRegion.width/2);
+    // //Prima prova di riconoscimento posizione basandosi sulla posizione attuale della pupilla
+    // //in relazione al centro del rettangolo regone occhio -- Non credo sia una buona soluzione :\
+    // left_center = Point(leftEyeRegion.width/2 , leftEyeRegion.width/2);
 
-    left_center.x += rightEyeRegion.x;
-    left_center.y += rightEyeRegion.y;
+    // left_center.x += rightEyeRegion.x;
+    // left_center.y += rightEyeRegion.y;
 
     //circle(frame, left_center, 10, 255);    
 
-    if( (leftPupil.x - left_center.x) > move_trigger){
-        down_pos = true;
-        up_pos = false; //Fault tollerance
-    } else if( ( leftPupil.x - left_center.x ) < -move_trigger){
+    //ATTENTION - the X COORDINATE ARE UPSIDE DOWN
+    //This means that the x grows going from the top to the bottom of the streen!
+    if( leftPupil.x < up_trigger - treshold_trigger ){
         down_pos = false;
-        up_pos = true;
+        up_pos = true; //Fault tollerance
+    } else if( leftPupil.x > down_trigger + treshold_trigger ){
+        down_pos = true;
+        up_pos = false; 
     }
 
 
-    if( (leftPupil.y - left_center.y) > move_trigger ){
+    if( leftPupil.y > rigth_trigger + treshold_trigger ){
         rigth_pos = true;
         left_pos = false;
-
-    } else if( (leftPupil.y - left_center.y) < -move_trigger ){
+    } else if( leftPupil.y  < left_trigger - treshold_trigger ){
         rigth_pos = false;
         left_pos = true;
     }
