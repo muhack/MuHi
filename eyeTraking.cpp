@@ -241,10 +241,11 @@ int main( void ){
         int c = waitKey(10);
         if( (char)c == 27 ) { break; }
         if( (char)c == 'd' ) { debug_mode = !debug_mode; }
-        if( (char)c == '-' ) { resetTare(); }
-        if( (char)c == '+' ) { }
+        if( (char)c == '-' ) { treshold_trigger--; }
+        if( (char)c == '+' ) { treshold_trigger++; }
         if( (char)c == 'f' ) { flip_input = !flip_input; }
         if( (char)c == 't' ) { target_checked = true; }
+        if( (char)c == 'l' ) { resetTare() ;}
         
         if(face.area() != 0)
             circle(result, findGazeFocus(), 5, 5);
@@ -443,6 +444,9 @@ void deltaShift(){
     } else if( leftPupil.x > down_trigger + treshold_trigger ){
         down_pos = true;
         up_pos = false; 
+    } else { //Center position
+        down_pos = false;
+        up_pos = false;
     }
 
 
@@ -452,6 +456,9 @@ void deltaShift(){
     } else if( leftPupil.y  < left_trigger - treshold_trigger ){
         rigth_pos = false;
         left_pos = true;
+    } else {
+        rigth_pos = false;
+        left_pos = false;
     }
 
 
